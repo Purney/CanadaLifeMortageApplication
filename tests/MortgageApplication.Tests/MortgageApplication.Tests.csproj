@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\MortgageApplication.Api\MortgageApplication.Api.csproj" />
+    <ProjectReference Include="..\..\src\MortgageApplication.Web\MortgageApplication.Web.csproj" />
   </ItemGroup>
 
 </Project>

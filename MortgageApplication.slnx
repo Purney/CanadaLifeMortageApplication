@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/MortgageApplication.Api/MortgageApplication.Api.csproj" />
+    <Project Path="src/MortgageApplication.Web/MortgageApplication.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MortgageApplication.Tests/MortgageApplication.Tests.csproj" />

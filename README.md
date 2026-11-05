@@ -1,6 +1,6 @@
-# Mortgage Application API
+# Mortgage Application Demo
 
-A .NET 10 JSON API for submitting mortgage applications and saving simple affordability assessments. Built with Minimal APIs, a small service layer, EF Core/SQLite, and xUnit.
+A .NET 10 JSON API and Blazor frontend for submitting mortgage applications and saving simple affordability assessments. The solution contains `MortgageApplication.Api`, `MortgageApplication.Web`, and an xUnit test project.
 
 ## Run locally
 
@@ -13,6 +13,45 @@ dotnet run --project src/MortgageApplication.Api
 
 Open [Swagger UI](http://localhost:5080/swagger/index.html). The launch profile selects Development, where committed migrations are applied automatically before requests are served. SQLite creates `mortgages.db` in the API's working directory; retain that file across restarts to preserve data. No database server or credentials are needed.
 
+In a **second terminal**, also from the solution directory, start the frontend:
+
+```powershell
+dotnet run --project src/MortgageApplication.Web
+```
+
+Open the [Blazor demo](http://localhost:5082/). Keep both processes running. There is no login or authentication.
+
+### Demonstrate the three tasks
+
+1. Choose **Start an application**. Enter the five values or choose a preset from **Use example figures**, then save. The API response explains missing fields, supported limits, monetary precision, and the deposit/property relationship.
+2. Keep the saved application reference. **Find application** retrieves it by that reference, including after an API restart with the same database.
+3. Choose **Run an assessment** from the application overview. The result shows the decision/explanation, repayment, LTV, DTI, both borrowing estimates, and the saved inputs and rules. Return to the application to filter, sort, refresh, or page its assessment history and open any saved result.
+
+The UI uses Canada Life-inspired red/light styling based on [the supplied reference](https://www.canadalife.co.uk/). It is clearly labeled as a technical exercise. Amounts are displayed as GBP for the UK demo; the API remains currency-neutral and performs no currency conversion. The example button fills fields without submitting or creating data. All records and decisions come from the API.
+
+### Demonstrate API validation
+
+On **New application**, hover over or focus **Use example figures** to open the choices. Click or tap also opens the picker; Tab reaches each option and Escape closes it. Choose standard figures or one of the former error examples. Selecting only fills the inputs and clears the previous API response.
+
+- Choose **Required fields**, **Income outside the range**, **Deposit matches the property**, **Too many decimal places**, or **Term outside the range**, then explicitly choose **Save application**. The request reaches the API; its actual HTTP 400 response supplies the summary and field messages. Invalid requests create no records.
+- Enter `1.5` for the term or nonnumeric text in a money field and save to demonstrate API JSON binding errors. The Web form retains raw text, with no browser numeric constraints or frontend business validator. Blank fields become JSON null, valid JSON number tokens retain their original precision, and other text is sent as a JSON string for API binding to accept or reject.
+- Choose **Standard figures** to clear the previous response, then save for a successful request. Run an assessment from the saved application.
+- Choose **A declined assessment**, save, then run an assessment. Zero deposit is valid input, but the default 90% LTV rule declines it. This saves an application and assessment; it demonstrates a business outcome. Custom policy can change the decision.
+- On **Find application**, open **Use example reference**, choose **Malformed reference** or **Unsaved reference**, then explicitly choose **Find application**. Both requests reach the API and display its actual missing-record response. A real saved reference navigates to the returned application.
+
+The pickers make no requests until Save or Find is chosen. The separate Error examples page has been removed. The API remains the sole source of input validation; POST requests are never retried automatically.
+
+### Frontend API connection
+
+The Web server calls the API through a typed HTTP client; browser CORS configuration is unnecessary. The default API address is `http://localhost:5080/`. To change it, edit `MortgageApi:ApiBaseUrl` in the Web project's settings or set:
+
+```powershell
+$env:MortgageApi__ApiBaseUrl = 'http://localhost:5080/'
+dotnet run --project src/MortgageApplication.Web
+```
+
+The address is validated at startup as an absolute HTTP/HTTPS URL without credentials, query, or fragment. Requests time out after 20 seconds. POST requests are not automatically retried: if a timeout occurs, an operation may already have been saved. The UI provides errors/retry controls without inventing results when the API is unavailable. Blazor Interactive Server requires a live connection to the Web process.
+
 Build and run the automated checks:
 
 ```powershell
@@ -20,7 +59,7 @@ dotnet build
 dotnet test
 ```
 
-Tests use isolated temporary SQLite files and exercise actual HTTP routing through the ASP.NET Core test host. They cover calculations and boundaries, validation, startup policy, migrations, snapshot history across restart, ordering, failures, and Swagger.
+Tests use isolated temporary SQLite files and exercise actual HTTP routing through the ASP.NET Core test host. They cover calculations and boundaries, validation, startup policy, migrations, snapshot history across restart, ordering, failures, and Swagger. Frontend tests cover raw JSON transport, preset requests against the actual API, invalid-record rejection, configuration, HTTP/error handling, rendered pickers, and Web-client compatibility with the API contracts.
 
 ## Try the API
 
@@ -132,7 +171,7 @@ Swagger UI and automatic migrations are enabled only in Development. Migration f
 
 ## Design and reflection
 
-**Key decisions.** (1) One API project plus tests, organized into contracts, endpoints, services, configuration, and data folders: enough separation to test business logic without a large framework. (2) SQLite with EF Core and migrations: durable local storage with a repeatable setup and no external server. (3) Immutable assessment snapshots: each record captures inputs, applied settings, unrounded result, timestamp, and calculation version so configuration changes cannot rewrite history. Metadata columns support lookups; the full snapshot is JSON stored atomically in one row. Applications have a one-to-many relationship to assessments.
+**Key decisions.** (1) Separate API and Blazor Web projects plus tests: thin UI pages consume the JSON API through a typed client, while validation and affordability decisions remain authoritative in the API. Web-local wire models avoid a dependency on API internals; contract tests guard that small duplication. (2) SQLite with EF Core and migrations: durable local storage with a repeatable setup and no external server. (3) Immutable assessment snapshots: each record captures inputs, applied settings, unrounded result, timestamp, and calculation version so configuration changes cannot rewrite history. Metadata columns support lookups; the full snapshot is JSON stored atomically in one row. Applications have a one-to-many relationship to assessments.
 
 **Scaling.** Measure first, then replace local SQLite with a shared server database if concurrent assessment writes cause contention or multiple API instances are needed. Review migrations, numeric types, snapshot storage, and provider behavior during that move. The bounded calculator is inexpensive; queues and caching are not the first changes.
 
@@ -140,4 +179,4 @@ Swagger UI and automatic migrations are enabled only in Development. Migration f
 
 **Next steps.** Add authorization and operational security, retention/audit controls, idempotent creation if required, managed policy versions, and database/load testing driven by actual deployment needs. Consider cursor paging and an indexed decision column if history volume or concurrent reads/writes justify them.
 
-The detailed decision record is [reasonings.md](reasonings.md); the completed implementation checklist is [implementation-plan.md](implementation-plan.md). A three-slide discussion outline is in [presentation.md](presentation.md).
+The detailed decision record is [reasonings.md](Planning/reasonings.md); the completed implementation checklist is [implementation-plan.md](Planning/implementation-plan.md). The original brief is [task.md](Planning/task.md), and a three-slide discussion outline is in [presentation.md](Planning/presentation.md).
